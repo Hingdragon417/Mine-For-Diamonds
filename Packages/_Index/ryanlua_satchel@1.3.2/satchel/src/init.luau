@@ -1,26 +1,6 @@
 --!strict
 --!nolint DeprecatedApi
 
---[[
-	Name: Satchel
-	Version: 1.3.2
-	Description: Satchel is a modern open-source alternative to Roblox's default backpack. Satchel aims to be more customizable and easier to use than the default backpack while still having a "vanilla" feel.
-	By: @WinnersTakesAll on Roblox & @RyanLua on GitHub
-
-	Acknowledgements (@Roblox):
-		@OnlyTwentyCharacters, @SolarCrane -- For creating the CoreGui script
-		@thebrickplanetboy -- For allowing me to republish his fork of the backpack system.
-		@ForeverHD -- Making Topbar Plus and open-sourcing it for everyone to use
-
-	DevForum: https://devforum.roblox.com/t/2451549
-]]
-
---[[
-	This Source Code Form is subject to the terms of the Mozilla Public
-	License, v. 2.0. If a copy of the MPL was not distributed with this
-	file, You can obtain one at Mozilla Public License Version 2.0.
-]]
-
 local ContextActionService = game:GetService("ContextActionService")
 local TextChatService = game:GetService("TextChatService")
 local UserInputService = game:GetService("UserInputService")
@@ -33,66 +13,58 @@ local PlayerGui: Instance = Players.LocalPlayer:WaitForChild("PlayerGui")
 
 local BackpackScript = {}
 
-BackpackScript.OpenClose = nil :: any -- Function to toggle open/close
+BackpackScript.OpenClose = nil :: any
 BackpackScript.IsOpen = false :: boolean
-BackpackScript.StateChanged = Instance.new("BindableEvent") :: BindableEvent -- Fires after any open/close, passes IsNowOpen
+BackpackScript.StateChanged = Instance.new("BindableEvent") :: BindableEvent
 
 BackpackScript.ModuleName = "Backpack" :: string
 BackpackScript.KeepVRTopbarOpen = true :: boolean
 BackpackScript.VRIsExclusive = true :: boolean
 BackpackScript.VRClosesNonExclusive = true :: boolean
 
-BackpackScript.BackpackEmpty = Instance.new("BindableEvent") :: BindableEvent -- Fires when the backpack is empty (no tools
+BackpackScript.BackpackEmpty = Instance.new("BindableEvent") :: BindableEvent
 BackpackScript.BackpackEmpty.Name = "BackpackEmpty"
 
-BackpackScript.BackpackItemAdded = Instance.new("BindableEvent") :: BindableEvent -- Fires when an item is added to the backpack
+BackpackScript.BackpackItemAdded = Instance.new("BindableEvent") :: BindableEvent
 BackpackScript.BackpackItemAdded.Name = "BackpackAdded"
 
-BackpackScript.BackpackItemRemoved = Instance.new("BindableEvent") :: BindableEvent -- Fires when an item is removed from the backpack
+BackpackScript.BackpackItemRemoved = Instance.new("BindableEvent") :: BindableEvent
 BackpackScript.BackpackItemRemoved.Name = "BackpackRemoved"
 
 local targetScript: ModuleScript = script
 
--- Constants --
 local PREFERRED_TRANSPARENCY: number = GuiService.PreferredTransparency or 1
 
--- Legacy behavior for backpack
-local LEGACY_EDGE_ENABLED: boolean = not targetScript:GetAttribute("OutlineEquipBorder") or false -- Instead of the edge selection being inset, it will be on the outlined.  LEGACY_PADDING must be enabled for this to work or this will do nothing
-local LEGACY_PADDING_ENABLED: boolean = targetScript:GetAttribute("InsetIconPadding") -- Instead of the icon taking up the full slot, it will be padded on each side.
+local LEGACY_EDGE_ENABLED: boolean = not targetScript:GetAttribute("OutlineEquipBorder") or false
+local LEGACY_PADDING_ENABLED: boolean = targetScript:GetAttribute("InsetIconPadding")
 
--- Background
 local BACKGROUND_TRANSPARENCY_DEFAULT: number = targetScript:GetAttribute("BackgroundTransparency") or 0.3
 local BACKGROUND_TRANSPARENCY: number = BACKGROUND_TRANSPARENCY_DEFAULT * PREFERRED_TRANSPARENCY
 local BACKGROUND_CORNER_RADIUS: UDim = UDim.new(0, 8)
 local BACKGROUND_COLOR: Color3 = targetScript:GetAttribute("BackgroundColor3")
 	or Color3.new(25 / 255, 27 / 255, 29 / 255)
 
--- Slots
 local SLOT_EQUIP_COLOR: Color3 = targetScript:GetAttribute("EquipBorderColor3") or Color3.new(0 / 255, 162 / 255, 1)
-local SLOT_LOCKED_TRANSPARENCY_DEFAULT: number = targetScript:GetAttribute("BackgroundTransparency") or 0.3 -- Locked means undraggable
+local SLOT_LOCKED_TRANSPARENCY_DEFAULT: number = targetScript:GetAttribute("BackgroundTransparency") or 0.3
 local SLOT_LOCKED_TRANSPARENCY: number = SLOT_LOCKED_TRANSPARENCY_DEFAULT * PREFERRED_TRANSPARENCY
-local SLOT_EQUIP_THICKNESS: number = targetScript:GetAttribute("EquipBorderSizePixel") or 5 -- Relative
+local SLOT_EQUIP_THICKNESS: number = targetScript:GetAttribute("EquipBorderSizePixel") or 5
 local SLOT_CORNER_RADIUS: UDim = targetScript:GetAttribute("CornerRadius") or UDim.new(0, 8)
-local SLOT_BORDER_COLOR: Color3 = Color3.new(1, 1, 1) -- Appears when dragging
+local SLOT_BORDER_COLOR: Color3 = Color3.new(1, 1, 1)
 
--- Tooltips
 local TOOLTIP_CORNER_RADIUS: UDim = SLOT_CORNER_RADIUS - UDim.new(0, 5) or UDim.new(0, 3)
 local TOOLTIP_BACKGROUND_COLOR: Color3 = targetScript:GetAttribute("BackgroundColor3")
 	or Color3.new(25 / 255, 27 / 255, 29 / 255)
 local TOOLTIP_PADDING: number = 4
 local TOOLTIP_HEIGHT: number = 16
-local TOOLTIP_OFFSET: number = -5 -- From to
+local TOOLTIP_OFFSET: number = -5
 
--- Topbar icons
 local ARROW_IMAGE_OPEN: string = "rbxasset://textures/ui/TopBar/inventoryOn.png"
 local ARROW_IMAGE_CLOSE: string = "rbxasset://textures/ui/TopBar/inventoryOff.png"
--- local ARROW_HOTKEY: { Enum.KeyCode } = { Enum.KeyCode.Backquote, Enum.KeyCode.DPadUp } --TODO: Hookup '~' too?
 
--- Hotbar slots
-local HOTBAR_SLOTS_FULL: number = 10 -- 10 is the max
+local HOTBAR_SLOTS_FULL: number = 10
 local HOTBAR_SLOTS_VR: number = 6
-local HOTBAR_SLOTS_MINI: number = 6 -- Mobile gets 6 slots instead of default 3 it had before
-local HOTBAR_SLOTS_WIDTH_CUTOFF: number = 1024 -- Anything smaller is MINI
+local HOTBAR_SLOTS_MINI: number = 6
+local HOTBAR_SLOTS_WIDTH_CUTOFF: number = 1024
 
 local INVENTORY_ROWS_FULL: number = 4
 local INVENTORY_ROWS_VR: number = 3
@@ -100,12 +72,10 @@ local INVENTORY_ROWS_MINI: number = 2
 local INVENTORY_HEADER_SIZE: number = 40
 local INVENTORY_ARROWS_BUFFER_VR: number = 40
 
--- Text
 local TEXT_COLOR: Color3 = targetScript:GetAttribute("TextColor3") or Color3.new(1, 1, 1)
 local TEXT_STROKE_TRANSPARENCY: number = targetScript:GetAttribute("TextStrokeTransparency") or 0.5
 local TEXT_STROKE_COLOR: Color3 = targetScript:GetAttribute("TextStrokeColor3") or Color3.new(0, 0, 0)
 
--- Search
 local SEARCH_BACKGROUND_COLOR: Color3 = Color3.new(25 / 255, 27 / 255, 29 / 255)
 local SEARCH_BACKGROUND_TRANSPARENCY_DEFAULT: number = 0.2
 local SEARCH_BACKGROUND_TRANSPARENCY: number = SEARCH_BACKGROUND_TRANSPARENCY_DEFAULT * PREFERRED_TRANSPARENCY
@@ -120,7 +90,6 @@ local SEARCH_IMAGE_X: string = "rbxasset://textures/ui/InspectMenu/x.png"
 local SEARCH_BUFFER_PIXELS: number = 5
 local SEARCH_WIDTH_PIXELS: number = 200
 
--- Misc
 local FONT_FAMILY: Font = targetScript:GetAttribute("FontFace")
 	or Font.new("rbxasset://fonts/families/BuilderSans.json")
 local FONT_SIZE: number = targetScript:GetAttribute("TextSize") or 16
@@ -131,7 +100,7 @@ local ICON_BUFFER_PIXELS: number = 5
 local ICON_SIZE_PIXELS: number = 60
 
 local MOUSE_INPUT_TYPES: { [Enum.UserInputType]: boolean } =
-	{ -- These are the input types that will be used for mouse -- [[ADDED]], Optional
+	{
 		[Enum.UserInputType.MouseButton1] = true,
 		[Enum.UserInputType.MouseButton2] = true,
 		[Enum.UserInputType.MouseButton3] = true,
@@ -140,7 +109,7 @@ local MOUSE_INPUT_TYPES: { [Enum.UserInputType]: boolean } =
 	}
 
 local GAMEPAD_INPUT_TYPES: { [Enum.UserInputType]: boolean } =
-	{ -- These are the input types that will be used for gamepad
+	{
 		[Enum.UserInputType.Gamepad1] = true,
 		[Enum.UserInputType.Gamepad2] = true,
 		[Enum.UserInputType.Gamepad3] = true,
@@ -151,7 +120,6 @@ local GAMEPAD_INPUT_TYPES: { [Enum.UserInputType]: boolean } =
 		[Enum.UserInputType.Gamepad8] = true,
 	}
 
--- Topbar logic
 local BackpackEnabled: boolean = true
 
 local Icon: any = require(script.Parent:WaitForChild("topbarplus"))
@@ -207,25 +175,24 @@ local Character: Model = Player.Character or Player.CharacterAdded:Wait()
 local Humanoid: any = Character:WaitForChild("Humanoid")
 local Backpack: Instance = Player:WaitForChild("Backpack")
 
-local Slots = {} -- List of all Slots by index
+local Slots = {}
 local LowestEmptySlot: any = nil
-local SlotsByTool = {} -- Map of Tools to their assigned Slots
-local HotkeyFns = {} -- Map of KeyCode values to their assigned behaviors
-local Dragging: { boolean } = {} -- Only used to check if anything is being dragged, to disable other input
-local FullHotbarSlots: number = 0 -- Now being used to also determine whether or not LB and RB on the gamepad are enabled.
-local ActiveHopper = nil -- NOTE: HopperBin
-local StarterToolFound: boolean = false -- Special handling is required for the gear currently equipped on the site
+local SlotsByTool = {}
+local HotkeyFns = {}
+local Dragging: { boolean } = {}
+local FullHotbarSlots: number = 0
+local ActiveHopper = nil
+local StarterToolFound: boolean = false
 local WholeThingEnabled: boolean = false
-local TextBoxFocused: boolean = false -- ANY TextBox, not just the search box
-local ViewingSearchResults: boolean = false -- If the results of a search are currently being viewed
--- local HotkeyStrings = {} -- Used for eating/releasing hotkeys
-local CharConns: { RBXScriptConnection } = {} -- Holds character Connections to be cleared later
-local GamepadEnabled: boolean = false -- determines if our gui needs to be gamepad friendly
+local TextBoxFocused: boolean = false
+local ViewingSearchResults: boolean = false
+local CharConns: { RBXScriptConnection } = {}
+local GamepadEnabled: boolean = false
 
-local IsVR: boolean = VRService.VREnabled -- Are we currently using a VR device?
-local NumberOfHotbarSlots: number = IsVR and HOTBAR_SLOTS_VR or (IS_PHONE and HOTBAR_SLOTS_MINI or HOTBAR_SLOTS_FULL) -- Number of slots shown at the bottom
+local IsVR: boolean = VRService.VREnabled
+local NumberOfHotbarSlots: number = IsVR and HOTBAR_SLOTS_VR or (IS_PHONE and HOTBAR_SLOTS_MINI or HOTBAR_SLOTS_FULL)
 local NumberOfInventoryRows: number = IsVR and INVENTORY_ROWS_VR
-	or (IS_PHONE and INVENTORY_ROWS_MINI or INVENTORY_ROWS_FULL) -- How many rows in the popped-up inventory
+	or (IS_PHONE and INVENTORY_ROWS_MINI or INVENTORY_ROWS_FULL)
 local BackpackPanel = nil
 local lastEquippedSlot: any = nil
 

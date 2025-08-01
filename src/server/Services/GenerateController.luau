@@ -1,57 +1,69 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 
-local Packages = ReplicatedStorage.Packages
-local OresFolder = ReplicatedStorage.Ores
+local Knit = require(ReplicatedStorage.Packages.Knit)
 local OreChances = require(ReplicatedStorage.Shared.Modules.OreChances)
+local oresFolder = ReplicatedStorage:WaitForChild("Ores")
 
-local Knit = require(Packages.Knit)
-
-local StartPoint = Vector3.new(0, 0, 0) -- Example start point, adjust as needed
-
-local GenerateController = Knit.CreateService({
-    Name = "GenerateController",
-    Client = {}
+local MineService = Knit.CreateService({
+	Name = "MineService",
 })
 
-function GenerateController:ChooseOreFromChances()
-    local totalChance = 0
-    for _, chance in pairs(OreChances) do
-        totalChance += chance
-    end
+local mineLength = 25
+local mineWidth = 25
+local mineHeight = 1
+local oreSize = Vector3.new(4, 4, 4)
+local mineRootPosition = Vector3.new(0, 0, 0)
+local mineOrientation = CFrame.Angles(0, math.rad(90), 0)
 
-    local randomValue = math.random(1, totalChance)
-    local cumulativeChance = 0
+function MineService:getOre()
+	local totalChance = 0
+	for _, chance in pairs(OreChances) do
+		totalChance += chance
+	end
 
-    for oreType, chance in pairs(OreChances) do
-        cumulativeChance += chance
-        if randomValue <= cumulativeChance then
-            return oreType
-        end
-    end
-    return nil
+	local roll = math.random(1, totalChance)
+	local cumulative = 0
+
+	for oreName, chance in pairs(OreChances) do
+		cumulative += chance
+		if roll <= cumulative then
+			local model = oresFolder:FindFirstChild(oreName)
+			if model then
+				return model:Clone()
+			end
+		end
+	end
+
+	return nil
 end
 
-function GenerateController:GenerateOre(chosenOre)
-    local ore = OresFolder:FindFirstChild(chosenOre)
+function MineService:KnitStart()
+	local mine = Instance.new("Model")
+	mine.Name = "Mine"
+	mine.Parent = workspace
 
-    task.spawn(function()
-        if ore then
-            local oreClone = ore:Clone()
-            oreClone.PrimaryPart.Position = StartPoint + Vector3.new(math.random(-10, 10), 0, math.random(-10, 10)) -- Random position around the start point
-            oreClone.Parent = workspace -- Adjust parent as needed
-        else
-            warn("Ore type not found: " .. tostring(chosenOre))
-        end
-    end)
+	for x = 0, mineLength - 1 do
+		for z = 0, mineWidth - 1 do
+			for y = 0, mineHeight - 1 do
+				task.spawn(function()
+					local ore = self:getOre()
+					if not ore then return end
+
+					local localPos = Vector3.new(x * oreSize.X, -y * oreSize.Y, z * oreSize.Z)
+					local worldCFrame = CFrame.new(mineRootPosition) * mineOrientation * CFrame.new(localPos)
+					ore:PivotTo(worldCFrame)
+
+					for _, part in ipairs(ore:GetDescendants()) do
+						if part:IsA("BasePart") then
+							part.Anchored = true
+						end
+					end
+					ore.Parent = mine
+				end)
+			end
+		end
+	end
 end
 
-
-function GenerateController:KnitStart()
-    self:GenerateOre(self:ChooseOreFromChances())
-end
-
-function GenerateController:KnitInit() 
-
-end
-
-return GenerateController
+return MineService

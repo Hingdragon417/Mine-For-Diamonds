@@ -99,6 +99,7 @@ end
 
 function DataService:Replicate(player: Player, index: (string | { string })?)
 	local currentSession = self.getSession(player)
+	print("DataService:Replicate called for", player.Name, "index:", index)
 
 	if currentSession then
 		local data = currentSession.Data
@@ -106,16 +107,23 @@ function DataService:Replicate(player: Player, index: (string | { string })?)
 		if data then
 			if index then
 				if type(index) == "string" then
+					print("Firing ReplicateData for index:", index, "data:", data[index])
 					self.Client.ReplicateData:Fire(player, data[index], index)
 				elseif type(index) == "table" then
 					for _, idx in index do
+						print("Firing ReplicateData for index:", idx, "data:", data[idx])
 						self.Client.ReplicateData:Fire(player, data[idx], idx)
 					end
 				end
 			else
+				print("Firing ReplicateData for all data")
 				self.Client.ReplicateData:Fire(player, data)
 			end
+		else
+			print("No data found in session")
 		end
+	else
+		print("No session found for player")
 	end
 end
 

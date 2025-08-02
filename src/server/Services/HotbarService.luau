@@ -16,11 +16,19 @@ local MAX_SLOTS = 6
 
 function HotbarService:GetDefaultHotbar()
     local hotbar = {}
+    
+    for i = 1, 10 do
+        hotbar[i] = ""
+    end
+    
+    local itemCount = 0
     for itemName, itemData in Items do
-        if itemData.StartWith and #hotbar < MAX_SLOTS then
-            table.insert(hotbar, itemName)
+        if itemData.StartWith and itemCount < MAX_SLOTS then
+            itemCount = itemCount + 1
+            hotbar[itemCount] = itemName
         end
     end
+    
     return hotbar
 end
 
@@ -70,10 +78,12 @@ function HotbarService.Client:EquipTool(player, slotIndex)
 end
 
 function HotbarService.Client:SwapHotbarSlots(player, fromSlot, toSlot)
+    print("SwapHotbarSlots called for", player.Name, "from", fromSlot, "to", toSlot)
     local DataService = Knit.GetService("DataService")
     local session = DataService.getSession(player)
     
     if not session or not session.Data or not session.Data.hotbar then
+        print("No session or hotbar data found")
         return { success = false, hotbar = nil }
     end
     
@@ -81,18 +91,19 @@ function HotbarService.Client:SwapHotbarSlots(player, fromSlot, toSlot)
     local fromItem = hotbar[fromSlot]
     
     if not fromItem or fromItem == "" then
+        print("No item in from slot", fromSlot)
         return { success = false, hotbar = hotbar }
     end
     
     local toItem = hotbar[toSlot]
+    print("Swapping:", fromItem, "<->", toItem or "empty")
     
-    hotbar[fromSlot] = toItem
+    hotbar[fromSlot] = toItem or ""
     hotbar[toSlot] = fromItem
     
     session.Data.hotbar = hotbar
+    print("Calling DataService:Replicate for hotbar")
     DataService:Replicate(player, "hotbar")
-    
-    session:Save()
     
     return { success = true, hotbar = hotbar }
 end
@@ -101,20 +112,18 @@ function HotbarService.Client:GetHotbar(player)
     local DataService = Knit.GetService("DataService")
     local session = DataService.getSession(player)
     
-    if session and session.Data then
+    if session and session.Data and session.Data.hotbar then
         local hotbar = session.Data.hotbar
-        if type(hotbar) == "table" then
-            local hasItems = false
-            for i = 1, 10 do
-                if hotbar[i] and hotbar[i] ~= "" then
-                    hasItems = true
-                    break
-                end
+        local hasItems = false
+        for i = 1, 10 do
+            if hotbar[i] and hotbar[i] ~= "" then
+                hasItems = true
+                break
             end
-            
-            if hasItems then
-                return hotbar
-            end
+        end
+        
+        if hasItems then
+            return hotbar
         end
     end
     
@@ -128,10 +137,13 @@ function HotbarService:SetHotbar(player, hotbarData)
     local session = DataService.getSession(player)
     
     if session and session.Data then
-        session.Data.hotbar = hotbarData
-        DataService:Replicate(player, "hotbar")
+        local formattedHotbar = {}
+        for i = 1, 10 do
+            formattedHotbar[i] = hotbarData[i] or ""
+        end
         
-        session:Save()
+        session.Data.hotbar = formattedHotbar
+        DataService:Replicate(player, "hotbar")
     end
 end
 
@@ -142,7 +154,21 @@ function HotbarService:KnitStart()
         local session = DataService.waitForSession(player)
         
         if session and session.Data then
-            if not session.Data.hotbar or #session.Data.hotbar == 0 then
+            if not session.Data.hotbar then
+                session.Data.hotbar = {}
+            end
+            
+            local hotbar = session.Data.hotbar
+            local hasValidStructure = true
+            
+            for i = 1, 10 do
+                if hotbar[i] == nil then
+                    hasValidStructure = false
+                    break
+                end
+            end
+            
+            if not hasValidStructure then
                 local defaultHotbar = self:GetDefaultHotbar()
                 session.Data.hotbar = defaultHotbar
                 DataService:Replicate(player, "hotbar")

@@ -55,11 +55,21 @@ end
 function DataController.onReplicated(checkIndex: string | { string })
 	return {
 		Connect = function(_, callback: () -> any)
+			if not DataController._onReplicate then
+				DataController._onReplicate = Signal.new()
+			end
+			
+			print("Connecting onReplicated for index:", checkIndex)
 			return DataController._onReplicate:Connect(function(index: string?)
+				print("Signal fired for index:", index, "checking against:", checkIndex)
 				local valid = if type(checkIndex) == "table" then table.find(checkIndex, index) else index == checkIndex
 
-				if valid then
+				print("Valid match:", valid, "callback exists:", callback ~= nil)
+				if valid and callback then
+					print("Calling callback for index:", index)
 					callback()
+				elseif valid and not callback then
+					print("ERROR: Valid match but callback is nil!")
 				end
 			end)
 		end,
@@ -67,9 +77,13 @@ function DataController.onReplicated(checkIndex: string | { string })
 end
 
 function DataController.onReplicate(data: { [string]: any }, index: string?)
+	print("DataController.onReplicate called with data:", data, "index:", index)
 	if DataController._cache then
 		if index then
 			if type(data) == "table" then
+				if not DataController._cache[index] then
+					DataController._cache[index] = {}
+				end
 				DataController.reconcileTables(DataController._cache[index], data)
 			else
 				DataController._cache[index] = data
@@ -78,7 +92,8 @@ function DataController.onReplicate(data: { [string]: any }, index: string?)
 			DataController.reconcileTables(DataController._cache, data)
 		end
 
-		if index then
+		if index and DataController._onReplicate then
+			print("Firing _onReplicate signal for index:", index)
 			DataController._onReplicate:Fire(index)
 		end
 	else
@@ -87,7 +102,7 @@ function DataController.onReplicate(data: { [string]: any }, index: string?)
 end
 
 function DataController:KnitStart()
-	DataService.ReplicateData:Connect(self.onReplicate)
+	DataService.ReplicateData:Connect(DataController.onReplicate)
 end
 
 function DataController:KnitInit()

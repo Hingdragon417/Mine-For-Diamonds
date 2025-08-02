@@ -204,17 +204,11 @@ function HotbarController:EndDrag(targetSlot)
     end
     
     if targetSlot and targetSlot ~= self._dragStartSlot then
+        print("Attempting to swap slots:", self._dragStartSlot, "->", targetSlot)
         HotbarService:SwapHotbarSlots(self._dragStartSlot, targetSlot):andThen(function(result)
-            if result.success then
-                local hotbar = {}
-                for key, value in pairs(result.hotbar) do
-                    local numKey = tonumber(key)
-                    if numKey then
-                        hotbar[numKey] = value
-                    end
-                end
-                
-                self:DisplayHotbarItems(self._hotbarGui, hotbar)
+            print("Swap result:", result)
+            if not result.success then
+                warn("Failed to swap hotbar slots")
             end
         end):catch(function(err)
             warn("Error swapping hotbar slots:", err)
@@ -353,8 +347,10 @@ function HotbarController:KnitStart()
     self._dragUpdateConnection = nil
     self._dragHandledByGlobal = false
     self._currentHotbarData = {}
+    self._hotbarConnection = nil
 
     local HotbarService = Knit.GetService("HotbarService")
+    local DataController = Knit.GetController("DataController")
     local StarterGui = game:GetService("StarterGui")
 
     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
@@ -373,10 +369,26 @@ function HotbarController:KnitStart()
 
     self:ConnectHotbarUI(hotbarGui)
 
-    HotbarService:GetHotbar():andThen(function(hotbarData)
-        self:DisplayHotbarItems(hotbarGui, hotbarData)
-    end):catch(function()
-        self:DisplayHotbarItems(hotbarGui, {})
+    local function onHotbarDataReplicated()
+        print("HotbarController: onReplicated callback triggered")
+        local data = DataController.getData()
+        print("Hotbar data replicated:", data and data.hotbar)
+        if data and data.hotbar then
+            print("Updating UI with hotbar data")
+            self:DisplayHotbarItems(hotbarGui, data.hotbar)
+        else
+            print("No hotbar data found or data is nil")
+        end
+    end
+
+    self._hotbarConnection = DataController.onReplicated("hotbar"):Connect(onHotbarDataReplicated)
+
+    task.spawn(function()
+        local data = DataController.waitForData()
+        print("Initial hotbar data loaded:", data and data.hotbar)
+        if data and data.hotbar then
+            self:DisplayHotbarItems(hotbarGui, data.hotbar)
+        end
     end)
 end
 

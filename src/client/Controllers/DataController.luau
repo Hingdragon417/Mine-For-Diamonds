@@ -59,17 +59,11 @@ function DataController.onReplicated(checkIndex: string | { string })
 				DataController._onReplicate = Signal.new()
 			end
 			
-			print("Connecting onReplicated for index:", checkIndex)
 			return DataController._onReplicate:Connect(function(index: string?)
-				print("Signal fired for index:", index, "checking against:", checkIndex)
 				local valid = if type(checkIndex) == "table" then table.find(checkIndex, index) else index == checkIndex
 
-				print("Valid match:", valid, "callback exists:", callback ~= nil)
 				if valid and callback then
-					print("Calling callback for index:", index)
 					callback()
-				elseif valid and not callback then
-					print("ERROR: Valid match but callback is nil!")
 				end
 			end)
 		end,
@@ -77,7 +71,6 @@ function DataController.onReplicated(checkIndex: string | { string })
 end
 
 function DataController.onReplicate(data: { [string]: any }, index: string?)
-	print("DataController.onReplicate called with data:", data, "index:", index)
 	if DataController._cache then
 		if index then
 			if type(data) == "table" then
@@ -93,7 +86,6 @@ function DataController.onReplicate(data: { [string]: any }, index: string?)
 		end
 
 		if index and DataController._onReplicate then
-			print("Firing _onReplicate signal for index:", index)
 			DataController._onReplicate:Fire(index)
 		end
 	else

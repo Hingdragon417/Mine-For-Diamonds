@@ -1,6 +1,6 @@
 return {
 	hotbar = {
-		[1] = "",
+		[1] = "Wooden Pickaxe",
 		[2] = "",
 		[3] = "",
 		[4] = "",

@@ -29,12 +29,8 @@ local function GetKeyCodeForSlot(slotIndex)
 end
 
 function HotbarController:TweenToScale(item, scale, time, easingStyle, easingDirection)
-    local uiScale = item:FindFirstChildOfClass("UIScale")
-    if not uiScale then
-        uiScale = Instance.new("UIScale")
-        uiScale.Scale = DEFAULT_SCALE
-        uiScale.Parent = item
-    end
+    local uiScale = item:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", item) 
+     uiScale.Scale = DEFAULT_SCALE
 
     local currentTween = self._tweenMap[item]
     if currentTween then
@@ -173,6 +169,8 @@ end
 function HotbarController:CancelDrag()
     if not self._isDragging then return end
     
+    local dragStartSlot = self._dragStartSlot
+    
     if self._dragUpdateConnection then
         self._dragUpdateConnection:Disconnect()
         self._dragUpdateConnection = nil
@@ -186,12 +184,20 @@ function HotbarController:CancelDrag()
     self._isDragging = false
     self._dragStartSlot = nil
     self._dragHandledByGlobal = false
+    
+    if dragStartSlot and self._hotbarGui then
+        local originalSlot = self._hotbarGui:FindFirstChild("SLOT_" .. dragStartSlot)
+        if originalSlot and not self._hoverState[originalSlot] then
+            self:TweenToScale(originalSlot, DEFAULT_SCALE, TWEEN_HOVER_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+        end
+    end
 end
 
 function HotbarController:EndDrag(targetSlot)
     if not self._isDragging then return end
     
     local HotbarService = Knit.GetService("HotbarService")
+    local dragStartSlot = self._dragStartSlot
     
     if self._dragUpdateConnection then
         self._dragUpdateConnection:Disconnect()
@@ -204,9 +210,7 @@ function HotbarController:EndDrag(targetSlot)
     end
     
     if targetSlot and targetSlot ~= self._dragStartSlot then
-        print("Attempting to swap slots:", self._dragStartSlot, "->", targetSlot)
         HotbarService:SwapHotbarSlots(self._dragStartSlot, targetSlot):andThen(function(result)
-            print("Swap result:", result)
             if not result.success then
                 warn("Failed to swap hotbar slots")
             end
@@ -218,6 +222,13 @@ function HotbarController:EndDrag(targetSlot)
     self._isDragging = false
     self._dragStartSlot = nil
     self._dragHandledByGlobal = false
+    
+    if dragStartSlot and self._hotbarGui then
+        local originalSlot = self._hotbarGui:FindFirstChild("SLOT_" .. dragStartSlot)
+        if originalSlot and not self._hoverState[originalSlot] then
+            self:TweenToScale(originalSlot, DEFAULT_SCALE, TWEEN_HOVER_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+        end
+    end
 end
 
 function HotbarController:PlayClickAnimation(item)
@@ -253,7 +264,7 @@ function HotbarController:ConnectHotbarUI(hotbar)
             item.MouseLeave:Connect(function()
                 self._hoverState[item] = false
                 task.wait(0.1)
-                if not self._hoverState[item] and not self._isDragging then
+                if not self._hoverState[item] and (not self._isDragging or (self._isDragging and self._dragStartSlot ~= slotIndex)) then
                     self:TweenToScale(item, DEFAULT_SCALE, TWEEN_HOVER_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
                 end
             end)
@@ -284,8 +295,8 @@ function HotbarController:ConnectHotbarUI(hotbar)
                     end
                     
                     dragCheckConnection = task.spawn(function()
-                        task.wait(0.5)
-                        if tick() - dragStartTime >= 0.5 then
+                        task.wait(0.1)
+                        if tick() - dragStartTime >= 0.1 then
                             isDragThreshold = true
                             self:StartDrag(item, slotIndex, self._currentHotbarData)
                         end
@@ -370,14 +381,9 @@ function HotbarController:KnitStart()
     self:ConnectHotbarUI(hotbarGui)
 
     local function onHotbarDataReplicated()
-        print("HotbarController: onReplicated callback triggered")
         local data = DataController.getData()
-        print("Hotbar data replicated:", data and data.hotbar)
         if data and data.hotbar then
-            print("Updating UI with hotbar data")
             self:DisplayHotbarItems(hotbarGui, data.hotbar)
-        else
-            print("No hotbar data found or data is nil")
         end
     end
 
@@ -385,7 +391,6 @@ function HotbarController:KnitStart()
 
     task.spawn(function()
         local data = DataController.waitForData()
-        print("Initial hotbar data loaded:", data and data.hotbar)
         if data and data.hotbar then
             self:DisplayHotbarItems(hotbarGui, data.hotbar)
         end

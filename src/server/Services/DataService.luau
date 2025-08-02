@@ -12,7 +12,7 @@ local Types = require(Shared.Types)
 local DATA_TEMPLATE = require(Shared.Data.Template)
 
 local IS_STUDIO = RunService:IsStudio()
-local STORE_NAME = if IS_STUDIO then "TESTSTUDIO11111" else "TESTGAME11111"
+local STORE_NAME = if IS_STUDIO then "TESTSTUDIO121111" else "TESTGAME11111"
 local STORE_VERSION = if IS_STUDIO then "1.2.7" else "1.1.0"
 local METADATA_INDEX_VERSION = if IS_STUDIO then "STUDIO_DATA_VERSION" else "GAME_DATA_VERSION"
 local SHOULD_SAVE = true
@@ -99,7 +99,6 @@ end
 
 function DataService:Replicate(player: Player, index: (string | { string })?)
 	local currentSession = self.getSession(player)
-	print("DataService:Replicate called for", player.Name, "index:", index)
 
 	if currentSession then
 		local data = currentSession.Data
@@ -107,23 +106,16 @@ function DataService:Replicate(player: Player, index: (string | { string })?)
 		if data then
 			if index then
 				if type(index) == "string" then
-					print("Firing ReplicateData for index:", index, "data:", data[index])
 					self.Client.ReplicateData:Fire(player, data[index], index)
 				elseif type(index) == "table" then
 					for _, idx in index do
-						print("Firing ReplicateData for index:", idx, "data:", data[idx])
 						self.Client.ReplicateData:Fire(player, data[idx], idx)
 					end
 				end
 			else
-				print("Firing ReplicateData for all data")
 				self.Client.ReplicateData:Fire(player, data)
 			end
-		else
-			print("No data found in session")
 		end
-	else
-		print("No session found for player")
 	end
 end
 

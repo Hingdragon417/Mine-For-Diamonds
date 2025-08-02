@@ -12,7 +12,7 @@ local HotbarService = Knit.CreateService({
     Client = {}
 })
 
-local MAX_SLOTS = 6
+local MAX_SLOTS = 10
 
 function HotbarService:GetDefaultHotbar()
     local hotbar = {}
@@ -78,12 +78,10 @@ function HotbarService.Client:EquipTool(player, slotIndex)
 end
 
 function HotbarService.Client:SwapHotbarSlots(player, fromSlot, toSlot)
-    print("SwapHotbarSlots called for", player.Name, "from", fromSlot, "to", toSlot)
     local DataService = Knit.GetService("DataService")
     local session = DataService.getSession(player)
     
     if not session or not session.Data or not session.Data.hotbar then
-        print("No session or hotbar data found")
         return { success = false, hotbar = nil }
     end
     
@@ -91,18 +89,15 @@ function HotbarService.Client:SwapHotbarSlots(player, fromSlot, toSlot)
     local fromItem = hotbar[fromSlot]
     
     if not fromItem or fromItem == "" then
-        print("No item in from slot", fromSlot)
         return { success = false, hotbar = hotbar }
     end
     
     local toItem = hotbar[toSlot]
-    print("Swapping:", fromItem, "<->", toItem or "empty")
     
     hotbar[fromSlot] = toItem or ""
     hotbar[toSlot] = fromItem
     
     session.Data.hotbar = hotbar
-    print("Calling DataService:Replicate for hotbar")
     DataService:Replicate(player, "hotbar")
     
     return { success = true, hotbar = hotbar }

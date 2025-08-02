@@ -37,6 +37,38 @@ function HotbarService:AssignTools(player, hotbar)
     end
 end
 
+function HotbarService.Client:EquipTool(player, slotIndex)
+    local DataService = Knit.GetService("DataService")
+    local session = DataService.getSession(player)
+    
+    if not session or not session.Data or not session.Data.hotbar then
+        return
+    end
+    
+    local itemName = session.Data.hotbar[slotIndex]
+    if not itemName then
+        return
+    end
+    
+    local character = player.Character
+    if not character then
+        return
+    end
+    
+    local toolsFolder = ServerStorage:WaitForChild("Tools")
+    local existingTool = character:FindFirstChild(itemName)
+    
+    if existingTool then
+        existingTool:Destroy()
+    else
+        local tool = toolsFolder:FindFirstChild(itemName)
+        if tool then
+            local clone = tool:Clone()
+            clone.Parent = character
+        end
+    end
+end
+
 function HotbarService.Client:GetHotbar(player)
     local DataService = Knit.GetService("DataService")
     local session = DataService.getSession(player)
@@ -69,17 +101,14 @@ function HotbarService:KnitStart()
     local DataService = Knit.GetService("DataService")
     
     Players.PlayerAdded:Connect(function(player)
-
         local session = DataService.waitForSession(player)
         
         if session and session.Data then
-
             if not session.Data.hotbar or #session.Data.hotbar == 0 then
                 local defaultHotbar = self:GetDefaultHotbar()
                 session.Data.hotbar = defaultHotbar
                 DataService:Replicate(player, "hotbar")
             end
-            self:AssignTools(player, session.Data.hotbar)
         end
     end)
 end

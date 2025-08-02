@@ -46,9 +46,10 @@ function HotbarController:DisplayHotbarItems(hotbarGui, hotbarData)
     end
     
     for slotIndex, itemName in hotbarData do
-        local slot = hotbarGui:FindFirstChild("Slot" .. slotIndex)
+        local slot = hotbarGui:WaitForChild("SLOT_" .. slotIndex)
+        print(slot)
         if slot and slot:IsA("Frame") then
-            local label = slot:FindFirstChild("Label")
+            local label = slot:FindFirstChild("Name")
             if label and label:IsA("TextLabel") then
                 label.Text = itemName
             end

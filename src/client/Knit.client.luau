@@ -4,7 +4,6 @@ local StarterGui = game:GetService("StarterGui")
 local Packages = ReplicatedStorage.Packages
 
 local Knit = require(Packages.Knit)
-local Satchel = require(Packages.Satchel)
 
 do
     Knit.AddControllersDeep(script.Parent.Controllers)

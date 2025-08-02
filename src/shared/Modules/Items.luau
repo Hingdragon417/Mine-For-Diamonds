@@ -3,7 +3,7 @@ return {
         Name = "Wooden Pickaxe",
         Description = "A basic pickaxe made of wood.",
         ToolType = "Pickaxe",
-        StartWith = true,
+        SpawnWith = true,
         Damage = 1,
     },
 }

@@ -6,26 +6,34 @@ local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
 
 local Items = require(ReplicatedStorage.Shared.Modules:WaitForChild("Items"))
+local HotbarConfig = require(ReplicatedStorage.Shared.Modules:WaitForChild("HotbarConfig"))
 
 local HotbarService = Knit.CreateService({
     Name = "HotbarService",
     Client = {}
 })
 
-local MAX_SLOTS = 10
+function HotbarService:GetSpawnItems()
+    local spawnItems = {}
+    for itemName, itemData in Items do
+        if itemData.SpawnWith then
+            table.insert(spawnItems, itemName)
+        end
+    end
+    return spawnItems
+end
 
 function HotbarService:GetDefaultHotbar()
     local hotbar = {}
     
-    for i = 1, 10 do
+    for i = 1, HotbarConfig.MAX_SLOTS do
         hotbar[i] = ""
     end
     
-    local itemCount = 0
-    for itemName, itemData in Items do
-        if itemData.StartWith and itemCount < MAX_SLOTS then
-            itemCount = itemCount + 1
-            hotbar[itemCount] = itemName
+    local spawnItems = self:GetSpawnItems()
+    for i, itemName in ipairs(spawnItems) do
+        if i <= HotbarConfig.MAX_SLOTS then
+            hotbar[i] = itemName
         end
     end
     
@@ -110,7 +118,7 @@ function HotbarService.Client:GetHotbar(player)
     if session and session.Data and session.Data.hotbar then
         local hotbar = session.Data.hotbar
         local hasItems = false
-        for i = 1, 10 do
+        for i = 1, HotbarConfig.MAX_SLOTS do
             if hotbar[i] and hotbar[i] ~= "" then
                 hasItems = true
                 break
@@ -133,7 +141,7 @@ function HotbarService:SetHotbar(player, hotbarData)
     
     if session and session.Data then
         local formattedHotbar = {}
-        for i = 1, 10 do
+        for i = 1, HotbarConfig.MAX_SLOTS do
             formattedHotbar[i] = hotbarData[i] or ""
         end
         
@@ -156,7 +164,7 @@ function HotbarService:KnitStart()
             local hotbar = session.Data.hotbar
             local hasValidStructure = true
             
-            for i = 1, 10 do
+            for i = 1, HotbarConfig.MAX_SLOTS do
                 if hotbar[i] == nil then
                     hasValidStructure = false
                     break

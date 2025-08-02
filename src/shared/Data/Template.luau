@@ -1,14 +1,13 @@
+local HotbarConfig = require(script.Parent.Parent.Modules.HotbarConfig)
+
+local function createEmptyHotbar()
+	local hotbar = {}
+	for i = 1, HotbarConfig.MAX_SLOTS do
+		hotbar[i] = ""
+	end
+	return hotbar
+end
+
 return {
-	hotbar = {
-		[1] = "Wooden Pickaxe",
-		[2] = "",
-		[3] = "",
-		[4] = "",
-		[5] = "",
-		[6] = "",
-		[7] = "",
-		[8] = "",
-		[9] = "",
-		[10] = "",
-	},
+	hotbar = createEmptyHotbar(),
 }  

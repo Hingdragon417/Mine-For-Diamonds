@@ -6,6 +6,8 @@ local UserInputService = game:GetService("UserInputService")
 local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
 
+local HotbarConfig = require(ReplicatedStorage.Shared.Modules.HotbarConfig)
+
 local HotbarController = Knit.CreateController({
     Name = "HotbarController",
 })
@@ -21,7 +23,7 @@ local NumberToEnumMap = {
     [1] = Enum.KeyCode.One, [2] = Enum.KeyCode.Two, [3] = Enum.KeyCode.Three,
     [4] = Enum.KeyCode.Four, [5] = Enum.KeyCode.Five, [6] = Enum.KeyCode.Six,
     [7] = Enum.KeyCode.Seven, [8] = Enum.KeyCode.Eight, [9] = Enum.KeyCode.Nine,
-    [0] = Enum.KeyCode.Zero,
+    [10] = Enum.KeyCode.Zero,
 }
 
 local function GetKeyCodeForSlot(slotIndex)
@@ -54,7 +56,7 @@ function HotbarController:CreateDragPreview(originalFrame)
     preview.Parent = originalFrame.Parent.Parent
     preview.BackgroundTransparency = 0.5
     preview.ZIndex = 1000
-    preview.Size = originalFrame.Size
+    preview.Size = UDim2.new(0, originalFrame.AbsoluteSize.X, 0, originalFrame.AbsoluteSize.Y)
     preview.Position = originalFrame.Position
     preview.Active = false
     
@@ -333,7 +335,7 @@ function HotbarController:DisplayHotbarItems(hotbarGui, hotbarData)
 
     self._currentHotbarData = hotbarData
     
-    for slotIndex = 1, 10 do
+    for slotIndex = 1, HotbarConfig.MAX_SLOTS do
         local slot = hotbarGui:FindFirstChild("SLOT_" .. slotIndex)
         if slot and slot:IsA("Frame") then
             local label = slot:FindFirstChild("Name")

@@ -12,7 +12,7 @@ local Types = require(Shared.Types)
 local DATA_TEMPLATE = require(Shared.Data.Template)
 
 local IS_STUDIO = RunService:IsStudio()
-local STORE_NAME = if IS_STUDIO then "TESTSTUDIO121111" else "TESTGAME11111"
+local STORE_NAME = if IS_STUDIO then "TESTSTUDIO121" else "TESTGAME11111"
 local STORE_VERSION = if IS_STUDIO then "1.2.7" else "1.1.0"
 local METADATA_INDEX_VERSION = if IS_STUDIO then "STUDIO_DATA_VERSION" else "GAME_DATA_VERSION"
 local SHOULD_SAVE = true
@@ -88,6 +88,13 @@ function DataService.onPlayerAdded(player: Player)
 	if session.RobloxMetaData[METADATA_INDEX_VERSION] ~= STORE_VERSION or not SHOULD_SAVE then
 		session.RobloxMetaData[METADATA_INDEX_VERSION] = STORE_VERSION
 		session.Data = TableUtil.DeepCopy(DATA_TEMPLATE)
+		
+		-- Auto-populate hotbar with SpawnWith items
+		local HotbarService = Knit.GetService("HotbarService")
+		if HotbarService then
+			local defaultHotbar = HotbarService:GetDefaultHotbar()
+			session.Data.hotbar = defaultHotbar
+		end
 	end
 
 	session:Reconcile()

@@ -9,8 +9,5 @@ do
     Knit.AddControllersDeep(script.Parent.Controllers)
 
     Knit.Start()
-        :andThen(function()
-            print("Client has started!")
-        end)
         :catch(warn)
 end

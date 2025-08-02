@@ -8,8 +8,5 @@ do
     Knit.AddServicesDeep(script.Parent.Services)
 
     Knit.Start()
-        :andThen(function()
-            print("Server has started!")
-        end)
         :catch(warn)
 end

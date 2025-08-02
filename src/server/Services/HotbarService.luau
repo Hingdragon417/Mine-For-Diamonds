@@ -9,11 +9,9 @@ local Items = require(ReplicatedStorage.Shared.Modules:WaitForChild("Items"))
 
 local HotbarService = Knit.CreateService({
     Name = "HotbarService",
-    Client = {},
-    Hotbars = {}
+    Client = {}
 })
 
--- Example default layout (max 6 slots)
 local MAX_SLOTS = 6
 
 function HotbarService:GetDefaultHotbar()
@@ -40,26 +38,49 @@ function HotbarService:AssignTools(player, hotbar)
 end
 
 function HotbarService.Client:GetHotbar(player)
-    local hotbar = HotbarService.Hotbars[player]
-    if type(hotbar) == "table" then
-        return hotbar
-    else
-        local defaultHotbar = HotbarService:GetDefaultHotbar()
-        HotbarService.Hotbars[player] = defaultHotbar
-        return defaultHotbar
+    local DataService = Knit.GetService("DataService")
+    local session = DataService.getSession(player)
+    
+    if session and session.Data then
+        local hotbar = session.Data.hotbar
+        if type(hotbar) == "table" and #hotbar > 0 then
+            print("Server hotbar data:", hotbar)
+            return hotbar
+        end
+    end
+    
+    local defaultHotbar = HotbarService:GetDefaultHotbar()
+    HotbarService:SetHotbar(player, defaultHotbar)
+    print("Server hotbar data:", defaultHotbar)
+    return defaultHotbar
+end
+
+function HotbarService:SetHotbar(player, hotbarData)
+    local DataService = Knit.GetService("DataService")
+    local session = DataService.getSession(player)
+    
+    if session and session.Data then
+        session.Data.hotbar = hotbarData
+        DataService:Replicate(player, "hotbar")
     end
 end
 
 function HotbarService:KnitStart()
+    local DataService = Knit.GetService("DataService")
+    
     Players.PlayerAdded:Connect(function(player)
-        local defaultHotbar = self:GetDefaultHotbar()
-        self.Hotbars[player] = defaultHotbar
 
-        self:AssignTools(player, defaultHotbar)
-    end)
+        local session = DataService.waitForSession(player)
+        
+        if session and session.Data then
 
-    Players.PlayerRemoving:Connect(function(player)
-        self.Hotbars[player] = nil
+            if not session.Data.hotbar or #session.Data.hotbar == 0 then
+                local defaultHotbar = self:GetDefaultHotbar()
+                session.Data.hotbar = defaultHotbar
+                DataService:Replicate(player, "hotbar")
+            end
+            self:AssignTools(player, session.Data.hotbar)
+        end
     end)
 end
 
